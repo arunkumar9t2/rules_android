@@ -51,6 +51,7 @@ def rules_android_workspace():
             "info.picocli:picocli:4.7.4",
             "junit:junit:4.13.2",
         ],
+        maven_install_json = Label("//:rules_android_maven_install.json"),
         repositories = [
             "https://maven.google.com",
             "https://repo1.maven.org/maven2",
