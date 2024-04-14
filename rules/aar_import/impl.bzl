@@ -157,7 +157,8 @@ def _process_resources(
         deps = ctx.attr.deps,
         exports = ctx.attr.exports,
         exports_manifest = getattr(ctx.attr, "exports_manifest", True),
-        propagate_resources = _acls.in_aar_propagate_resources(str(ctx.label)),
+        propagate_resources = True,
+        namespaced_r_class = False,
 
         # Tool and Processing related inputs
         aapt = _get_android_toolchain(ctx).aapt2.files_to_run,
@@ -353,7 +354,7 @@ def _process_jars(
         ),
         source_jar = source_jar,
         neverlink = False,
-        deps = r_java_info + java_infos,  # TODO(djwhang): Exports are not deps.
+        deps = java_infos,  # TODO(djwhang): Exports are not deps.
         exports =
             (r_java_info if _acls.in_aar_import_exports_r_java(str(ctx.label)) else []) +
             java_infos,  # TODO(djwhang): Deps are not exports.
@@ -502,8 +503,7 @@ def impl(ctx):
         r_java = resources_ctx.r_java,
         exports = _utils.collect_providers(JavaInfo, ctx.attr.exports),
         enable_desugar_java8 = ctx.fragments.android.desugar_java8,
-        enable_imports_deps_check =
-            _acls.in_aar_import_deps_checker(str(ctx.label)),
+        enable_imports_deps_check = False,
         aar_embedded_jars_extractor_tool =
             _get_android_toolchain(ctx).aar_embedded_jars_extractor.files_to_run,
         bootclasspath =

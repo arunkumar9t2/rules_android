@@ -188,7 +188,8 @@ def _process_data_binding(ctx, java_package, packaged_resources_ctx, **_unused_c
         value = data_binding.process(
             ctx,
             defines_resources = True,
-            enable_data_binding = ctx.attr.enable_data_binding,
+            enable_data_binding = False,
+            enable_view_binding = ctx.attr.enable_data_binding,
             java_package = java_package,
             layout_info = packaged_resources_ctx.data_binding_layout_info,
             artifact_type = "APPLICATION",
@@ -1074,5 +1075,5 @@ def impl(ctx):
     Returns:
       A list of providers.
     """
-    java_package = java.resolve_package_from_label(ctx.label, ctx.attr.custom_package)
+    java_package = ctx.attr.custom_package if ctx.attr.custom_package else None
     return processing_pipeline.run(ctx, java_package, _PROCESSING_PIPELINE)

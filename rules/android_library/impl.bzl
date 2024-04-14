@@ -152,7 +152,7 @@ def _process_resources(ctx, java_package, manifest_ctx, **unused_ctxs):
     resource_apks = []
     for apk in utils.collect_providers(StarlarkApkInfo, ctx.attr.resource_apks):
         resource_apks.append(apk.signed_apk)
-
+    
     # Process Android Resources
     resources_ctx = _resources.process(
         ctx,
@@ -175,7 +175,8 @@ def _process_resources(ctx, java_package, manifest_ctx, **unused_ctxs):
         enable_res_v3 = _flags.get(ctx).android_enable_res_v3,
         # TODO(b/144163743): remove fix_resource_transitivity, which was only added to emulate
         # misbehavior on the Java side.
-        fix_resource_transitivity = bool(ctx.attr.srcs),
+        fix_resource_transitivity = True,
+        namespaced_r_class = _flags.get(ctx).namespaced_r_class,
 
         # Tool and Processing related inputs
         aapt = get_android_toolchain(ctx).aapt2.files_to_run,
@@ -237,7 +238,8 @@ def _process_data_binding(ctx, java_package, resources_ctx, **unused_sub_ctxs):
         value = _data_binding.process(
             ctx,
             defines_resources = resources_ctx.defines_resources,
-            enable_data_binding = ctx.attr.enable_data_binding,
+            enable_data_binding = False,
+            enable_view_binding = ctx.attr.enable_data_binding,
             java_package = java_package,
             layout_info = resources_ctx.data_binding_layout_info,
             deps = utils.collect_providers(DataBindingV2Info, ctx.attr.deps),
@@ -274,7 +276,7 @@ def _process_jvm(ctx, exceptions_ctx, resources_ctx, idl_ctx, db_ctx, **unused_s
         ctx.outputs.lib_src_jar,
         srcs = ctx.files.srcs + idl_ctx.idl_java_srcs + db_ctx.java_srcs,
         javac_opts = ctx.attr.javacopts + db_ctx.javac_opts,
-        r_java = resources_ctx.r_java,
+        r_java = resources_ctx.r_java,  
         deps =
             utils.collect_providers(JavaInfo, ctx.attr.deps, idl_ctx.idl_deps),
         exports = utils.collect_providers(JavaInfo, ctx.attr.exports),
@@ -479,6 +481,21 @@ PROCESSORS = dict(
     BaselineProfilesProcessor = _process_baseline_profiles,
 )
 
+# TODO(b/119560471): Deprecate the usage of legacy providers.
+def _make_legacy_provider(intellij_ctx, jvm_ctx, providers):
+    return struct(
+        android = _intellij.make_legacy_android_provider(intellij_ctx.android_ide_info),
+        java = struct(
+            annotation_processing = jvm_ctx.java_info.annotation_processing,
+            outputs = jvm_ctx.java_info.outputs,
+            source_jars = depset(jvm_ctx.java_info.source_jars),
+            transitive_deps = jvm_ctx.java_info.transitive_compile_time_jars,
+            transitive_runtime_deps = jvm_ctx.java_info.transitive_runtime_jars,
+            transitive_source_jars = jvm_ctx.java_info.transitive_source_jars,
+        ),
+        providers = providers,
+    )
+
 def finalize(
         ctx,
         resources_ctx,
@@ -552,7 +569,7 @@ def finalize(
             _validation = depset(validation_outputs),
         ),
     ])
-    return providers
+    return _make_legacy_provider(intellij_ctx, jvm_ctx, providers)
 
 _PROCESSING_PIPELINE = processing_pipeline.make_processing_pipeline(
     processors = PROCESSORS,
@@ -568,5 +585,5 @@ def impl(ctx):
     Returns:
       A legacy struct provider.
     """
-    java_package = _java.resolve_package_from_label(ctx.label, ctx.attr.custom_package)
+    java_package = ctx.attr.custom_package if ctx.attr.custom_package else None
     return processing_pipeline.run(ctx, java_package, _PROCESSING_PIPELINE)

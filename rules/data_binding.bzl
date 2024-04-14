@@ -49,7 +49,7 @@ _NO_RESOURCES_PATH = "/tmp/no_resources"
 
 def _copy_annotation_file(ctx, output_dir, annotation_template):
     annotation_out = ctx.actions.declare_file(
-        output_dir + "/android/databinding/layouts/DataBindingInfo.java",
+        output_dir + "/androidx/databinding/layouts/DataBindingInfo.java",
     )
     _utils.copy_file(ctx, annotation_template, annotation_out)
     return annotation_out
@@ -64,7 +64,7 @@ def _gen_sources(ctx, output_dir, java_package, deps, layout_info, data_binding_
     args.add("-classInfoOut", class_info)
     args.add("-sourceOut", srcjar)
     args.add("-zipSourceOutput", "true")
-    args.add("-useAndroidX", "false")
+    args.add("-useAndroidX", "true")
 
     if deps:
         if type(deps[0].class_infos) == "depset":
@@ -114,7 +114,7 @@ def _setup_dependent_lib_artifacts(ctx, output_dir, deps):
             path = artifact.short_path
             if path.startswith("../"):
                 path = path[3:]
-            dep_lib_artifact = ctx.actions.declare_file(
+            dep_lib_artifact = ctx.actions.declare_directory(
                 output_dir + "dependent-lib-artifacts/" + path,
             )
 
@@ -159,7 +159,7 @@ def _get_javac_opts(
     # the manifest, or an appropriate rule attribute.
     javac_opts.append("-Aandroid.databinding.minApi=14")
     javac_opts.append("-Aandroid.databinding.enableV2=1")
-
+    
     javac_opts.append("-Aandroid.databinding.classLogDir=" + class_info_path)
     javac_opts.append("-Aandroid.databinding.layoutInfoDir=" + layout_info_path)
     return javac_opts
@@ -169,6 +169,7 @@ def _process(
         resources_ctx = None,
         defines_resources = False,
         enable_data_binding = False,
+        enable_view_binding = True,
         java_package = None,
         layout_info = None,
         artifact_type = "LIBRARY",
@@ -185,6 +186,7 @@ def _process(
       defines_resources: boolean. Determines whether resources were defined.
       enable_data_binding: boolean. Determines whether Data Binding should be
         enabled.
+      enable_view_binding: boolean. Determines whether View Binding should be enabled.
       java_package: String. The Java package.
       layout_info: A file. The layout-info zip file.
       artifact_type: String. Either LIBRARY or APPLICATION.
@@ -218,7 +220,7 @@ def _process(
         _PROVIDERS: [],
     }
 
-    if not enable_data_binding:
+    if not enable_data_binding and not enable_view_binding:
         db_info[_PROVIDERS] = [
             DataBindingV2Info(
                 databinding_v2_providers_in_deps = deps,
@@ -228,6 +230,23 @@ def _process(
         return struct(**db_info)
 
     output_dir = "databinding/%s/" % ctx.label.name
+
+    if enable_view_binding:
+        if defines_resources:
+            srcjar, class_info = _gen_sources(
+                ctx,
+                output_dir,
+                java_package,
+                deps,
+                layout_info,
+                data_binding_exec,
+            )
+            db_info[_JAVA_SRCS].append(srcjar)
+            db_info[_JAVA_ANNOTATION_PROCESSOR_ADDITIONAL_INPUTS].append(class_info)
+            return DataBindingContextInfo(**db_info)
+        else:
+            return DataBindingContextInfo(**db_info)
+            
 
     db_info[_JAVA_SRCS].append(_copy_annotation_file(
         ctx,
