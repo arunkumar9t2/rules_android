@@ -49,7 +49,7 @@ _NO_RESOURCES_PATH = "/tmp/no_resources"
 
 def _copy_annotation_file(ctx, output_dir, annotation_template):
     annotation_out = ctx.actions.declare_file(
-        output_dir + "/android/databinding/layouts/DataBindingInfo.java",
+        output_dir + "/androidx/databinding/layouts/DataBindingInfo.java",
     )
     _utils.copy_file(ctx, annotation_template, annotation_out)
     return annotation_out
@@ -64,7 +64,7 @@ def _gen_sources(ctx, output_dir, java_package, deps, layout_info, data_binding_
     args.add("-classInfoOut", class_info)
     args.add("-sourceOut", srcjar)
     args.add("-zipSourceOutput", "true")
-    args.add("-useAndroidX", "false")
+    args.add("-useAndroidX", "true")
 
     if deps:
         if type(deps[0].class_infos) == "depset":
@@ -114,7 +114,7 @@ def _setup_dependent_lib_artifacts(ctx, output_dir, deps):
             path = artifact.short_path
             if path.startswith("../"):
                 path = path[3:]
-            dep_lib_artifact = ctx.actions.declare_file(
+            dep_lib_artifact = ctx.actions.declare_directory(
                 output_dir + "dependent-lib-artifacts/" + path,
             )
 
@@ -159,7 +159,7 @@ def _get_javac_opts(
     # the manifest, or an appropriate rule attribute.
     javac_opts.append("-Aandroid.databinding.minApi=14")
     javac_opts.append("-Aandroid.databinding.enableV2=1")
-
+    
     javac_opts.append("-Aandroid.databinding.classLogDir=" + class_info_path)
     javac_opts.append("-Aandroid.databinding.layoutInfoDir=" + layout_info_path)
     return javac_opts
