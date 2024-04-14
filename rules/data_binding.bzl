@@ -169,6 +169,7 @@ def _process(
         resources_ctx = None,
         defines_resources = False,
         enable_data_binding = False,
+        enable_view_binding = True,
         java_package = None,
         layout_info = None,
         artifact_type = "LIBRARY",
@@ -185,6 +186,7 @@ def _process(
       defines_resources: boolean. Determines whether resources were defined.
       enable_data_binding: boolean. Determines whether Data Binding should be
         enabled.
+      enable_view_binding: boolean. Determines whether View Binding should be enabled.
       java_package: String. The Java package.
       layout_info: A file. The layout-info zip file.
       artifact_type: String. Either LIBRARY or APPLICATION.
@@ -218,7 +220,7 @@ def _process(
         _PROVIDERS: [],
     }
 
-    if not enable_data_binding:
+    if not enable_data_binding and not enable_view_binding:
         db_info[_PROVIDERS] = [
             DataBindingV2Info(
                 databinding_v2_providers_in_deps = deps,
@@ -228,6 +230,23 @@ def _process(
         return struct(**db_info)
 
     output_dir = "databinding/%s/" % ctx.label.name
+
+    if enable_view_binding:
+        if defines_resources:
+            srcjar, class_info = _gen_sources(
+                ctx,
+                output_dir,
+                java_package,
+                deps,
+                layout_info,
+                data_binding_exec,
+            )
+            db_info[_JAVA_SRCS].append(srcjar)
+            db_info[_JAVA_ANNOTATION_PROCESSOR_ADDITIONAL_INPUTS].append(class_info)
+            return DataBindingContextInfo(**db_info)
+        else:
+            return DataBindingContextInfo(**db_info)
+            
 
     db_info[_JAVA_SRCS].append(_copy_annotation_file(
         ctx,

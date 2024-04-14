@@ -150,7 +150,7 @@ def _process_resources(ctx, java_package, manifest_ctx, **unused_ctxs):
     resource_apks = []
     for apk in utils.collect_providers(StarlarkApkInfo, ctx.attr.resource_apks):
         resource_apks.append(apk.signed_apk)
-
+    
     # Process Android Resources
     resources_ctx = _resources.process(
         ctx,
@@ -236,7 +236,8 @@ def _process_data_binding(ctx, java_package, resources_ctx, **unused_sub_ctxs):
         value = _data_binding.process(
             ctx,
             defines_resources = resources_ctx.defines_resources,
-            enable_data_binding = ctx.attr.enable_data_binding,
+            enable_data_binding = False,
+            enable_view_binding = ctx.attr.enable_data_binding,
             java_package = java_package,
             layout_info = resources_ctx.data_binding_layout_info,
             deps = utils.collect_providers(DataBindingV2Info, ctx.attr.deps),
@@ -273,7 +274,7 @@ def _process_jvm(ctx, exceptions_ctx, resources_ctx, idl_ctx, db_ctx, **unused_s
         ctx.outputs.lib_src_jar,
         srcs = ctx.files.srcs + idl_ctx.idl_java_srcs + db_ctx.java_srcs,
         javac_opts = ctx.attr.javacopts + db_ctx.javac_opts,
-        r_java = resources_ctx.r_java,
+        r_java = resources_ctx.r_java,  
         deps =
             utils.collect_providers(JavaInfo, ctx.attr.deps, idl_ctx.idl_deps),
         exports = utils.collect_providers(JavaInfo, ctx.attr.exports),
